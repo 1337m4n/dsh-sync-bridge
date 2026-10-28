@@ -252,3 +252,45 @@ test('plugin is inert without init and disposes both background timers',async t=
   effect();assert.deepEqual(cleared,['interval','startup'])
  } finally {if(previous===undefined)delete process.env.DSH_HOME;else process.env.DSH_HOME=previous;cleanup(home)}
 })
+
+// Regression: cli.mjs used node:readline/promises' question(), which resolves ''
+// on piped stdin, so `cli.mjs init` answered by a pipe or a script wrote empty
+// credentials (or exited 13 on unsettled top-level await). Piped input must run
+// the same wizard as a terminal and persist every answer.
+test('cli init accepts piped answers for every prompt including masked secrets',async()=>{
+ const {spawn}=await import('node:child_process')
+ const home=fs.mkdtempSync(path.join(os.tmpdir(),'dsh-sync-cli-'))
+ const run=(answers,gap)=>new Promise((resolve,reject)=>{
+   const child=spawn(process.execPath,[path.join(path.dirname(new URL(import.meta.url).pathname),'cli.mjs'),'init'],{env:{...process.env,DSH_HOME:home},stdio:['pipe','pipe','pipe']})
+   let out=''
+   child.stdout.on('data',(chunk)=>{out+=chunk})
+   child.stderr.on('data',(chunk)=>{out+=chunk})
+   child.on('error',reject)
+   child.stdin.on('error',()=>{})
+   const queue=[...answers]
+   const timer=setInterval(()=>{
+     if(!queue.length){clearInterval(timer);child.stdin.end();return}
+     child.stdin.write(queue.shift()+'\n')
+   },gap)
+   child.on('exit',(code)=>{clearInterval(timer);resolve({code,out})})
+ })
+ try {
+   const answers=['subscriber','alice/private','piped-channel','piped-token','piped passphrase 123','YES','YES']
+   // 0ms floods the pipe (reader drains ahead of the questions), 150ms arrives
+   // prompt by prompt; both paths must agree.
+   for (const gap of [0,150]) {
+     fs.rmSync(path.join(home,'sync-bridge'),{recursive:true,force:true})
+     const {code,out}=await run(answers,gap)
+     assert.equal(code,0,`gap ${gap}: ${out}`)
+     assert.match(out,/Saved local-only configuration/)
+     const saved=readConfig(home)
+     assert.equal(saved.role,'subscriber')
+     assert.equal(saved.repo,'alice/private')
+     assert.equal(saved.channel,'piped-channel')
+     assert.equal(saved.token,'piped-token')
+     assert.equal(saved.passphrase,'piped passphrase 123')
+     assert.equal(saved.includeHomePatch,true)
+     assert.equal(saved.autoApply,true)
+   }
+ } finally {fs.rmSync(home,{recursive:true,force:true})}
+})
