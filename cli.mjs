@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline/promises'
 import {stdin as input, stdout as output} from 'node:process'
-import { createBridge, getHome, writeConfig, readConfig, bridgeDir } from './core.js'
+import { createBridge, getHome, writeConfig, validateConfig, bridgeDir } from './core.js'
 
 const home = getHome()
 const command=process.argv[2]
@@ -14,16 +14,15 @@ async function init() {
     const role=(await rl.question('Role (publisher on Mac / subscriber on Windows): ')).trim()
     const repo=(await rl.question('Private GitHub repository (owner/repo): ')).trim()
     const channel=(await rl.question('Shared channel name (e.g. personal-desktop): ')).trim()
+    console.log('WARNING: token and passphrase are entered visibly and saved unencrypted in local.json. Use a private terminal; restrict file/backup access.')
     const token=(await rl.question('GitHub fine-grained token (Contents read/write): ')).trim()
     const passphrase=(await rl.question('Encryption passphrase (same on both computers, >=16 chars): ')).trim()
     const includeHomePatch=(await rl.question('Also sync ~/.dsh/cordis.patch.yml? May contain secrets! Type YES: ')).trim()==='YES'
     const autoApply=(await rl.question('Automatically apply future changes after first approved import? Type YES: ')).trim()==='YES'
     const current={enabled:true,role,repo,channel,token,passphrase,includeHomePatch,autoApply,intervalSeconds:90}
-    if(!['publisher','subscriber'].includes(role))throw new Error('Invalid role')
-    if(passphrase.length<16)throw new Error('Passphrase too short')
+    validateConfig(current)
     // Validate without network before saving.
     writeConfig(home,current)
-    try{createBridge({home})}catch(e){fs.rmSync(path.join(bridgeDir(home),'local.json'),{force:true});throw e}
     console.log(`Saved local-only configuration to ${bridgeDir(home)}. Keep it private.`)
   } finally {rl.close()}
 }

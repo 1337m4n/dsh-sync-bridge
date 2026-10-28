@@ -20,3 +20,8 @@ desired-plugins.json
 # Editors
 .idea/
 .vscode/
+
+# Local handoff instructions (not release source)
+AGENTS.md
+CODEX_TASK.md
+CODEX_START_HERE.txt
