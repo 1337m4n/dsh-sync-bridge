@@ -1,0 +1,22 @@
+# Local dependencies and build artifacts
+node_modules/
+dist/
+coverage/
+*.log
+.DS_Store
+
+# Local DSH data and sync bridge credentials
+.dsh/
+sync-bridge/
+sync-bridge-assets/
+local.json
+inbox.json
+desired-plugins.json
+.env
+.env.*
+*.pem
+*.key
+
+# Editors
+.idea/
+.vscode/

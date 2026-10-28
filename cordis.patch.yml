@@ -1,0 +1,3 @@
+- insert:
+    - id: dsh-sync-bridge-local
+      name: dsh-sync-bridge-local

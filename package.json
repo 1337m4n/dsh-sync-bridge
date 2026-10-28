@@ -1,0 +1,11 @@
+{
+  "name": "dsh-sync-bridge-local",
+  "version": "0.1.0",
+  "description": "Encrypted Mac-to-Windows DeepSeek Harness desktop profile sync bridge",
+  "type": "module",
+  "main": "index.js",
+  "engines": { "node": ">=22", "dsh": ">=0.2.0 <0.3.0 || >=0.2.1-0 <0.3.0" },
+  "dsh": { "bundle": { "patch": "./cordis.patch.yml" } },
+  "files": ["index.js", "core.js", "cli.mjs", "cordis.patch.yml", "README.md"],
+  "scripts": { "test": "node --test" }
+}
